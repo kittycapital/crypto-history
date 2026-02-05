@@ -597,7 +597,8 @@
                     const firstPrice = days[dayNumbers[0]];
                     const normalized = dayNumbers.map(day => ({
                         day,
-                        return: ((days[day] - firstPrice) / firstPrice) * 100
+                        return: ((days[day] - firstPrice) / firstPrice) * 100,
+                        price: days[day]
                     }));
 
                     const lastReturn = normalized[normalized.length - 1].return;
@@ -666,7 +667,7 @@
                 if (!isBest && !isWorst && !isCurrent && !isSelected) {
                     datasets.push({
                         label: yearData.year.toString(),
-                        data: yearData.data.map(d => ({ x: d.day, y: d.return })),
+                        data: yearData.data.map(d => ({ x: d.day, y: d.return, price: d.price })),
                         borderColor: 'rgba(255, 255, 255, 0.12)',
                         borderWidth: 1.5,
                         fill: false,
@@ -696,7 +697,7 @@
                 if (selectedData) {
                     datasets.push({
                         label: selectedYear.toString() + ' (선택)',
-                        data: selectedData.data.map(d => ({ x: d.day, y: d.return })),
+                        data: selectedData.data.map(d => ({ x: d.day, y: d.return, price: d.price })),
                         borderColor: '#4dabf7',
                         borderWidth: 3,
                         fill: false,
@@ -711,7 +712,7 @@
             if (worstData) {
                 datasets.push({
                     label: `${worstYear} (역대 최저)`,
-                    data: worstData.data.map(d => ({ x: d.day, y: d.return })),
+                    data: worstData.data.map(d => ({ x: d.day, y: d.return, price: d.price })),
                     borderColor: '#ff4757',
                     borderWidth: 2.5,
                     fill: false,
@@ -725,7 +726,7 @@
             if (bestData) {
                 datasets.push({
                     label: `${bestYear} (역대 최고)`,
-                    data: bestData.data.map(d => ({ x: d.day, y: d.return })),
+                    data: bestData.data.map(d => ({ x: d.day, y: d.return, price: d.price })),
                     borderColor: '#00d4aa',
                     borderWidth: 2.5,
                     fill: false,
@@ -739,7 +740,7 @@
             if (currentData) {
                 datasets.push({
                     label: `${currentYear} (현재)`,
-                    data: currentData.data.map(d => ({ x: d.day, y: d.return })),
+                    data: currentData.data.map(d => ({ x: d.day, y: d.return, price: d.price })),
                     borderColor: '#ffd43b',
                     borderWidth: 3,
                     fill: false,
@@ -781,7 +782,22 @@
                                 label: (context) => {
                                     const value = context.parsed.y;
                                     const sign = value >= 0 ? '+' : '';
-                                    return ` ${context.dataset.label}: ${sign}${value.toFixed(2)}%`;
+                                    const rawData = context.raw;
+                                    
+                                    // Format price if available
+                                    let priceStr = '';
+                                    if (rawData && rawData.price !== undefined) {
+                                        const price = rawData.price;
+                                        if (price >= 1000) {
+                                            priceStr = ` ($${price.toLocaleString('en-US', { maximumFractionDigits: 0 })})`;
+                                        } else if (price >= 1) {
+                                            priceStr = ` ($${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+                                        } else {
+                                            priceStr = ` ($${price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })})`;
+                                        }
+                                    }
+                                    
+                                    return ` ${context.dataset.label}: ${sign}${value.toFixed(2)}%${priceStr}`;
                                 }
                             }
                         }
