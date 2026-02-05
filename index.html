@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>역대 암호화폐 퍼포먼스</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-green: #00d4aa;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffd43b;
+            --accent-blue: #4dabf7;
+            --border-color: #2a2a2a;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 0 30px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, #888 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Coin Tabs */
+        .coin-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+            padding: 0 10px;
+        }
+
+        .coin-tab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 160px;
+        }
+
+        .coin-tab:hover {
+            background: var(--bg-tertiary);
+            border-color: #3a3a3a;
+        }
+
+        .coin-tab.active {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-yellow);
+            box-shadow: 0 0 20px rgba(255, 212, 59, 0.1);
+        }
+
+        .coin-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .coin-icon.btc { background: linear-gradient(135deg, #f7931a, #c77800); }
+        .coin-icon.eth { background: linear-gradient(135deg, #627eea, #3c4f9e); }
+        .coin-icon.sol { background: linear-gradient(135deg, #00ffa3, #dc1fff); }
+        .coin-icon.xrp { background: linear-gradient(135deg, #23292f, #000000); }
+        .coin-icon.bnb { background: linear-gradient(135deg, #f3ba2f, #c99a00); }
+
+        .coin-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .coin-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .coin-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .coin-price.loading {
+            color: var(--text-muted);
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.best { background: var(--accent-green); }
+        .legend-dot.worst { background: var(--accent-red); }
+        .legend-dot.avg { background: #888888; border: 2px dashed #888; background: transparent; }
+        .legend-dot.current { background: var(--accent-yellow); }
+        .legend-dot.selected { background: var(--accent-blue); }
+
+        .chart-container {
+            position: relative;
+            height: 450px;
+            width: 100%;
+        }
+
+        /* Heatmap Section */
+        .heatmap-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .heatmap-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            min-width: 900px;
+        }
+
+        .heatmap-table th {
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+        }
+
+        .heatmap-table td {
+            padding: 10px 6px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.15s ease;
+        }
+
+        .heatmap-table tr {
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .heatmap-table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .heatmap-table tbody tr.selected {
+            background: rgba(77, 171, 247, 0.15);
+        }
+
+        .heatmap-table .year-cell {
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        .heatmap-cell {
+            border-radius: 4px;
+            padding: 6px 4px;
+            font-weight: 500;
+        }
+
+        .heatmap-cell.positive {
+            background: rgba(0, 212, 170, 0.2);
+            color: var(--accent-green);
+        }
+
+        .heatmap-cell.negative {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--accent-red);
+        }
+
+        .heatmap-cell.neutral {
+            color: var(--text-muted);
+        }
+
+        .heatmap-cell.current-month {
+            border: 2px solid var(--accent-yellow);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+            }
+
+            .coin-tabs {
+                gap: 6px;
+            }
+
+            .coin-tab {
+                padding: 10px 14px;
+                min-width: 140px;
+            }
+
+            .chart-section, .heatmap-section {
+                padding: 20px 15px;
+                border-radius: 12px;
+            }
+
+            .chart-container {
+                height: 350px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .chart-legend {
+                gap: 12px;
+            }
+        }
+
+        /* Loading state */
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-yellow);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>역대 암호화폐 퍼포먼스</h1>
+            <p>월별 수익률 비교 및 역사적 패턴 분석</p>
+        </header>
+
+        <nav class="coin-tabs">
+            <div class="coin-tab active" data-coin="bitcoin">
+                <div class="coin-icon btc">₿</div>
+                <div class="coin-info">
+                    <span class="coin-name">Bitcoin</span>
+                    <span class="coin-price loading" id="price-bitcoin">연결중...</span>
+                </div>
+            </div>
+            <div class="coin-tab" data-coin="ethereum">
+                <div class="coin-icon eth">Ξ</div>
+                <div class="coin-info">
+                    <span class="coin-name">Ethereum</span>
+                    <span class="coin-price loading" id="price-ethereum">연결중...</span>
+                </div>
+            </div>
+            <div class="coin-tab" data-coin="solana">
+                <div class="coin-icon sol">◎</div>
+                <div class="coin-info">
+                    <span class="coin-name">Solana</span>
+                    <span class="coin-price loading" id="price-solana">연결중...</span>
+                </div>
+            </div>
+            <div class="coin-tab" data-coin="xrp">
+                <div class="coin-icon xrp">✕</div>
+                <div class="coin-info">
+                    <span class="coin-name">XRP</span>
+                    <span class="coin-price loading" id="price-xrp">연결중...</span>
+                </div>
+            </div>
+            <div class="coin-tab" data-coin="bnb">
+                <div class="coin-icon bnb">B</div>
+                <div class="coin-info">
+                    <span class="coin-name">BNB</span>
+                    <span class="coin-price loading" id="price-bnb">연결중...</span>
+                </div>
+            </div>
+        </nav>
+
+        <section class="chart-section">
+            <div class="section-header">
+                <h2 class="section-title" id="chart-title">Bitcoin 2월, 과거엔 어땠을까?</h2>
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="legend-dot best"></span>역대 최고</div>
+                    <div class="legend-item"><span class="legend-dot worst"></span>역대 최저</div>
+                    <div class="legend-item"><span class="legend-dot avg"></span>평균</div>
+                    <div class="legend-item"><span class="legend-dot current"></span>현재 <span id="current-year">2026</span></div>
+                    <div class="legend-item"><span class="legend-dot selected"></span>선택됨</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </section>
+
+        <section class="heatmap-section">
+            <div class="section-header">
+                <h2 class="section-title">월별 수익률</h2>
+            </div>
+            <table class="heatmap-table" id="heatmapTable">
+                <thead>
+                    <tr>
+                        <th>연도</th>
+                        <th>1월</th>
+                        <th>2월</th>
+                        <th>3월</th>
+                        <th>4월</th>
+                        <th>5월</th>
+                        <th>6월</th>
+                        <th>7월</th>
+                        <th>8월</th>
+                        <th>9월</th>
+                        <th>10월</th>
+                        <th>11월</th>
+                        <th>12월</th>
+                    </tr>
+                </thead>
+                <tbody id="heatmapBody">
+                </tbody>
+            </table>
+        </section>
+
+        <footer class="footer">
+            데이터 출처: CoinGecko | 매일 자동 업데이트
+        </footer>
+    </div>
+
+    <script>
+        // Global state
+        let currentCoin = 'bitcoin';
+        let coinData = {};
+        let chart = null;
+        let selectedYear = null;
+
+        const COIN_SYMBOLS = {
+            bitcoin: 'btcusdt',
+            ethereum: 'ethusdt',
+            solana: 'solusdt',
+            xrp: 'xrpusdt',
+            bnb: 'bnbusdt'
+        };
+
+        const COIN_NAMES_KR = {
+            bitcoin: '비트코인',
+            ethereum: '이더리움',
+            solana: '솔라나',
+            xrp: 'XRP',
+            bnb: 'BNB'
+        };
+
+        const MONTH_NAMES_KR = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        // Initialize Binance WebSocket for live prices
+        function initWebSocket() {
+            const streams = Object.values(COIN_SYMBOLS).map(s => `${s}@ticker`).join('/');
+            const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const symbol = data.stream.split('@')[0];
+                const price = parseFloat(data.data.c);
+
+                for (const [coin, sym] of Object.entries(COIN_SYMBOLS)) {
+                    if (sym === symbol) {
+                        const priceEl = document.getElementById(`price-${coin}`);
+                        if (priceEl) {
+                            priceEl.textContent = formatPrice(price);
+                            priceEl.classList.remove('loading');
+                        }
+                        break;
+                    }
+                }
+            };
+
+            ws.onerror = () => {
+                console.log('WebSocket error, using fallback');
+                // Fallback: show static message
+                document.querySelectorAll('.coin-price').forEach(el => {
+                    if (el.classList.contains('loading')) {
+                        el.textContent = '-';
+                    }
+                });
+            };
+        }
+
+        function formatPrice(price) {
+            if (price >= 1000) {
+                return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            } else if (price >= 1) {
+                return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+            }
+        }
+
+        // Load CSV data
+        async function loadCoinData(coin) {
+            if (coinData[coin]) return coinData[coin];
+
+            try {
+                const response = await fetch(`data/${coin}.csv`);
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                const data = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    const dateStr = parts[0];
+                    const price = parseFloat(parts[1]);
+
+                    if (!isNaN(price) && dateStr) {
+                        const date = new Date(dateStr.replace(' UTC', ''));
+                        data.push({ date, price });
+                    }
+                }
+
+                data.sort((a, b) => a.date - b.date);
+                coinData[coin] = data;
+                return data;
+            } catch (error) {
+                console.error(`Failed to load ${coin} data:`, error);
+                return [];
+            }
+        }
+
+        // Calculate monthly returns
+        function calculateMonthlyReturns(data) {
+            const monthlyData = {};
+
+            data.forEach(d => {
+                const year = d.date.getFullYear();
+                const month = d.date.getMonth();
+                const day = d.date.getDate();
+                const key = `${year}-${month}`;
+
+                if (!monthlyData[key]) {
+                    monthlyData[key] = { year, month, days: {} };
+                }
+                monthlyData[key].days[day] = d.price;
+            });
+
+            const returns = [];
+            for (const key in monthlyData) {
+                const m = monthlyData[key];
+                const days = Object.keys(m.days).map(Number).sort((a, b) => a - b);
+                if (days.length >= 2) {
+                    const firstDay = days[0];
+                    const lastDay = days[days.length - 1];
+                    const openPrice = m.days[firstDay];
+                    const closePrice = m.days[lastDay];
+                    const returnPct = ((closePrice - openPrice) / openPrice) * 100;
+
+                    returns.push({
+                        year: m.year,
+                        month: m.month,
+                        return: returnPct,
+                        days: m.days
+                    });
+                }
+            }
+
+            return returns;
+        }
+
+        // Get historical data for specific month across all years
+        function getMonthHistoricalData(data, targetMonth) {
+            const monthlyData = {};
+
+            data.forEach(d => {
+                const year = d.date.getFullYear();
+                const month = d.date.getMonth();
+                const day = d.date.getDate();
+
+                if (month === targetMonth) {
+                    if (!monthlyData[year]) {
+                        monthlyData[year] = {};
+                    }
+                    monthlyData[year][day] = d.price;
+                }
+            });
+
+            const results = [];
+            for (const year in monthlyData) {
+                const days = monthlyData[year];
+                const dayNumbers = Object.keys(days).map(Number).sort((a, b) => a - b);
+                if (dayNumbers.length >= 2) {
+                    const firstPrice = days[dayNumbers[0]];
+                    const normalized = dayNumbers.map(day => ({
+                        day,
+                        return: ((days[day] - firstPrice) / firstPrice) * 100
+                    }));
+
+                    const lastReturn = normalized[normalized.length - 1].return;
+                    results.push({
+                        year: parseInt(year),
+                        data: normalized,
+                        totalReturn: lastReturn
+                    });
+                }
+            }
+
+            return results.sort((a, b) => a.year - b.year);
+        }
+
+        // Create performance chart
+        function createChart(historicalData, currentMonth) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const currentYear = new Date().getFullYear();
+            const datasets = [];
+
+            // Find best, worst, and calculate average
+            let bestYear = null, worstYear = null;
+            let bestReturn = -Infinity, worstReturn = Infinity;
+            const allReturns = [];
+
+            historicalData.forEach(yearData => {
+                if (yearData.totalReturn > bestReturn) {
+                    bestReturn = yearData.totalReturn;
+                    bestYear = yearData.year;
+                }
+                if (yearData.totalReturn < worstReturn) {
+                    worstReturn = yearData.totalReturn;
+                    worstYear = yearData.year;
+                }
+                allReturns.push(yearData);
+            });
+
+            // Calculate average line
+            const maxDays = Math.max(...historicalData.map(y => y.data.length));
+            const avgData = [];
+            for (let i = 0; i < maxDays; i++) {
+                let sum = 0, count = 0;
+                historicalData.forEach(yearData => {
+                    if (yearData.data[i]) {
+                        sum += yearData.data[i].return;
+                        count++;
+                    }
+                });
+                if (count > 0) {
+                    avgData.push({ x: i + 1, y: sum / count });
+                }
+            }
+
+            // Add faded historical lines
+            historicalData.forEach(yearData => {
+                const isBest = yearData.year === bestYear;
+                const isWorst = yearData.year === worstYear;
+                const isCurrent = yearData.year === currentYear;
+                const isSelected = yearData.year === selectedYear;
+
+                if (!isBest && !isWorst && !isCurrent && !isSelected) {
+                    datasets.push({
+                        label: yearData.year.toString(),
+                        data: yearData.data.map(d => ({ x: d.day, y: d.return })),
+                        borderColor: 'rgba(255, 255, 255, 0.12)',
+                        borderWidth: 1.5,
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: 'rgba(255, 255, 255, 0.8)'
+                    });
+                }
+            });
+
+            // Add average line (dashed)
+            datasets.push({
+                label: '평균',
+                data: avgData,
+                borderColor: '#888888',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3,
+                pointRadius: 0
+            });
+
+            // Add selected year (if any)
+            if (selectedYear) {
+                const selectedData = historicalData.find(y => y.year === selectedYear);
+                if (selectedData) {
+                    datasets.push({
+                        label: selectedYear.toString() + ' (선택)',
+                        data: selectedData.data.map(d => ({ x: d.day, y: d.return })),
+                        borderColor: '#4dabf7',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 0
+                    });
+                }
+            }
+
+            // Add worst year
+            const worstData = historicalData.find(y => y.year === worstYear);
+            if (worstData) {
+                datasets.push({
+                    label: `${worstYear} (역대 최저)`,
+                    data: worstData.data.map(d => ({ x: d.day, y: d.return })),
+                    borderColor: '#ff4757',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                });
+            }
+
+            // Add best year
+            const bestData = historicalData.find(y => y.year === bestYear);
+            if (bestData) {
+                datasets.push({
+                    label: `${bestYear} (역대 최고)`,
+                    data: bestData.data.map(d => ({ x: d.day, y: d.return })),
+                    borderColor: '#00d4aa',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                });
+            }
+
+            // Add current year
+            const currentData = historicalData.find(y => y.year === currentYear);
+            if (currentData) {
+                datasets.push({
+                    label: `${currentYear} (현재)`,
+                    data: currentData.data.map(d => ({ x: d.day, y: d.return })),
+                    borderColor: '#ffd43b',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#ffd43b'
+                });
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: (items) => {
+                                    if (items.length > 0) {
+                                        return `${currentMonth + 1}월 ${Math.round(items[0].parsed.x)}일`;
+                                    }
+                                    return '';
+                                },
+                                label: (context) => {
+                                    const value = context.parsed.y;
+                                    const sign = value >= 0 ? '+' : '';
+                                    return ` ${context.dataset.label}: ${sign}${value.toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: 1,
+                            max: 31,
+                            title: {
+                                display: true,
+                                text: '일',
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#888',
+                                stepSize: 5
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '수익률 (%)',
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#888',
+                                callback: (value) => {
+                                    const sign = value >= 0 ? '+' : '';
+                                    return sign + value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create heatmap table
+        function createHeatmap(returns, currentMonth) {
+            const tbody = document.getElementById('heatmapBody');
+            tbody.innerHTML = '';
+
+            // Group by year
+            const yearlyData = {};
+            returns.forEach(r => {
+                if (!yearlyData[r.year]) {
+                    yearlyData[r.year] = {};
+                }
+                yearlyData[r.year][r.month] = r.return;
+            });
+
+            const years = Object.keys(yearlyData).map(Number).sort((a, b) => b - a);
+            const currentYear = new Date().getFullYear();
+
+            years.forEach(year => {
+                const row = document.createElement('tr');
+                row.dataset.year = year;
+
+                // Year cell
+                const yearCell = document.createElement('td');
+                yearCell.className = 'year-cell';
+                yearCell.textContent = year;
+                row.appendChild(yearCell);
+
+                // Month cells
+                for (let month = 0; month < 12; month++) {
+                    const cell = document.createElement('td');
+                    const value = yearlyData[year][month];
+
+                    if (value !== undefined) {
+                        const span = document.createElement('span');
+                        span.className = 'heatmap-cell';
+
+                        if (value > 0) {
+                            span.classList.add('positive');
+                            span.textContent = '+' + value.toFixed(1) + '%';
+                        } else if (value < 0) {
+                            span.classList.add('negative');
+                            span.textContent = value.toFixed(1) + '%';
+                        } else {
+                            span.classList.add('neutral');
+                            span.textContent = '0.0%';
+                        }
+
+                        // Highlight current month column
+                        if (month === currentMonth && year === currentYear) {
+                            span.classList.add('current-month');
+                        }
+
+                        cell.appendChild(span);
+                    }
+
+                    row.appendChild(cell);
+                }
+
+                // Click handler for row selection
+                row.addEventListener('click', () => {
+                    const wasSelected = row.classList.contains('selected');
+
+                    // Remove selection from all rows
+                    document.querySelectorAll('.heatmap-table tr.selected').forEach(r => {
+                        r.classList.remove('selected');
+                    });
+
+                    if (wasSelected) {
+                        selectedYear = null;
+                    } else {
+                        row.classList.add('selected');
+                        selectedYear = year;
+                    }
+
+                    // Refresh chart
+                    updateChart();
+                });
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update chart title
+        function updateChartTitle(coin, month) {
+            const title = document.getElementById('chart-title');
+            const coinName = COIN_NAMES_KR[coin] || coin;
+            const monthName = MONTH_NAMES_KR[month];
+            title.textContent = `${coinName} ${monthName}, 과거엔 어땠을까?`;
+        }
+
+        // Main update function
+        async function updateChart() {
+            const data = await loadCoinData(currentCoin);
+            if (data.length === 0) return;
+
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            document.getElementById('current-year').textContent = currentYear;
+
+            // Update chart title
+            updateChartTitle(currentCoin, currentMonth);
+
+            // Get historical data for current month
+            const historicalData = getMonthHistoricalData(data, currentMonth);
+            createChart(historicalData, currentMonth);
+
+            // Calculate all monthly returns for heatmap
+            const monthlyReturns = calculateMonthlyReturns(data);
+            createHeatmap(monthlyReturns, currentMonth);
+        }
+
+        // Tab click handlers
+        document.querySelectorAll('.coin-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.coin-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                currentCoin = tab.dataset.coin;
+                selectedYear = null;
+
+                // Clear selected rows
+                document.querySelectorAll('.heatmap-table tr.selected').forEach(r => {
+                    r.classList.remove('selected');
+                });
+
+                updateChart();
+            });
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebSocket();
+            updateChart();
+        });
+    </script>
+</body>
+</html>
