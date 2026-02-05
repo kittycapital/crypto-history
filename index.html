@@ -105,18 +105,17 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
         }
 
-        .coin-icon.btc { background: linear-gradient(135deg, #f7931a, #c77800); }
-        .coin-icon.eth { background: linear-gradient(135deg, #627eea, #3c4f9e); }
-        .coin-icon.sol { background: linear-gradient(135deg, #00ffa3, #dc1fff); }
-        .coin-icon.xrp { background: linear-gradient(135deg, #23292f, #000000); }
-        .coin-icon.bnb { background: linear-gradient(135deg, #f3ba2f, #c99a00); }
+        .coin-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
         .coin-info {
             display: flex;
@@ -351,35 +350,35 @@
 
         <nav class="coin-tabs">
             <div class="coin-tab active" data-coin="bitcoin">
-                <div class="coin-icon btc">₿</div>
+                <div class="coin-icon"><img src="assets/bitcoin.svg" alt="BTC"></div>
                 <div class="coin-info">
                     <span class="coin-name">Bitcoin</span>
                     <span class="coin-price loading" id="price-bitcoin">연결중...</span>
                 </div>
             </div>
             <div class="coin-tab" data-coin="ethereum">
-                <div class="coin-icon eth">Ξ</div>
+                <div class="coin-icon"><img src="assets/ethereum.png" alt="ETH"></div>
                 <div class="coin-info">
                     <span class="coin-name">Ethereum</span>
                     <span class="coin-price loading" id="price-ethereum">연결중...</span>
                 </div>
             </div>
             <div class="coin-tab" data-coin="solana">
-                <div class="coin-icon sol">◎</div>
+                <div class="coin-icon"><img src="assets/solana.png" alt="SOL"></div>
                 <div class="coin-info">
                     <span class="coin-name">Solana</span>
                     <span class="coin-price loading" id="price-solana">연결중...</span>
                 </div>
             </div>
             <div class="coin-tab" data-coin="xrp">
-                <div class="coin-icon xrp">✕</div>
+                <div class="coin-icon"><img src="assets/xrp.svg" alt="XRP"></div>
                 <div class="coin-info">
                     <span class="coin-name">XRP</span>
                     <span class="coin-price loading" id="price-xrp">연결중...</span>
                 </div>
             </div>
             <div class="coin-tab" data-coin="bnb">
-                <div class="coin-icon bnb">B</div>
+                <div class="coin-icon"><img src="assets/bnb.png" alt="BNB"></div>
                 <div class="coin-info">
                     <span class="coin-name">BNB</span>
                     <span class="coin-price loading" id="price-bnb">연결중...</span>
@@ -575,6 +574,8 @@
         // Get historical data for specific month across all years
         function getMonthHistoricalData(data, targetMonth) {
             const monthlyData = {};
+            const currentYear = new Date().getFullYear();
+            let currentMonthFirstPrice = null;
 
             data.forEach(d => {
                 const year = d.date.getFullYear();
@@ -589,17 +590,32 @@
                 }
             });
 
+            // Get current year's first day price for this month
+            if (monthlyData[currentYear]) {
+                const currentYearDays = Object.keys(monthlyData[currentYear]).map(Number).sort((a, b) => a - b);
+                if (currentYearDays.length > 0) {
+                    currentMonthFirstPrice = monthlyData[currentYear][currentYearDays[0]];
+                }
+            }
+
             const results = [];
             for (const year in monthlyData) {
                 const days = monthlyData[year];
                 const dayNumbers = Object.keys(days).map(Number).sort((a, b) => a - b);
                 if (dayNumbers.length >= 2) {
                     const firstPrice = days[dayNumbers[0]];
-                    const normalized = dayNumbers.map(day => ({
-                        day,
-                        return: ((days[day] - firstPrice) / firstPrice) * 100,
-                        price: days[day]
-                    }));
+                    const normalized = dayNumbers.map(day => {
+                        const returnPct = ((days[day] - firstPrice) / firstPrice) * 100;
+                        // Calculate projected price based on current month's first day price
+                        const projectedPrice = currentMonthFirstPrice 
+                            ? currentMonthFirstPrice * (1 + returnPct / 100)
+                            : days[day];
+                        return {
+                            day,
+                            return: returnPct,
+                            price: projectedPrice
+                        };
+                    });
 
                     const lastReturn = normalized[normalized.length - 1].return;
                     results.push({
