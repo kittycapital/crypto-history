@@ -276,6 +276,38 @@
             border: 2px solid var(--accent-yellow);
         }
 
+        /* Statistics rows */
+        .heatmap-table tfoot {
+            border-top: 2px solid var(--border-color);
+        }
+
+        .heatmap-table tfoot tr {
+            background: var(--bg-tertiary);
+        }
+
+        .heatmap-table tfoot td {
+            padding: 10px 6px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .heatmap-table tfoot .stat-label {
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        .heatmap-table tfoot .stat-best {
+            color: var(--accent-green);
+        }
+
+        .heatmap-table tfoot .stat-worst {
+            color: var(--accent-red);
+        }
+
+        .heatmap-table tfoot .stat-avg {
+            color: var(--text-secondary);
+        }
+
         /* Footer */
         .footer {
             text-align: center;
@@ -430,7 +462,24 @@
                 </thead>
                 <tbody id="heatmapBody">
                 </tbody>
+                <tfoot id="heatmapFoot">
+                </tfoot>
             </table>
+        </section>
+
+        <section class="chart-section">
+            <div class="section-header">
+                <h2 class="section-title" id="yearly-chart-title">2026년 가격 시나리오</h2>
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="legend-dot best"></span>역대 최고</div>
+                    <div class="legend-item"><span class="legend-dot worst"></span>역대 최저</div>
+                    <div class="legend-item"><span class="legend-dot avg"></span>평균</div>
+                    <div class="legend-item"><span class="legend-dot current"></span>현재 2026</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="yearlyChart"></canvas>
+            </div>
         </section>
 
         <footer class="footer">
@@ -443,6 +492,7 @@
         let currentCoin = 'bitcoin';
         let coinData = {};
         let chart = null;
+        let yearlyChart = null;
         let selectedYear = null;
 
         const COIN_SYMBOLS = {
@@ -865,7 +915,9 @@
         // Create heatmap table
         function createHeatmap(returns, currentMonth) {
             const tbody = document.getElementById('heatmapBody');
+            const tfoot = document.getElementById('heatmapFoot');
             tbody.innerHTML = '';
+            tfoot.innerHTML = '';
 
             // Group by year
             const yearlyData = {};
@@ -878,6 +930,25 @@
 
             const years = Object.keys(yearlyData).map(Number).sort((a, b) => b - a);
             const currentYear = new Date().getFullYear();
+
+            // Calculate statistics excluding current year
+            const stats = { best: {}, worst: {}, avg: {} };
+            for (let month = 0; month < 12; month++) {
+                const values = [];
+                years.forEach(year => {
+                    if (year !== currentYear && yearlyData[year][month] !== undefined) {
+                        values.push(yearlyData[year][month]);
+                    }
+                });
+                if (values.length > 0) {
+                    stats.best[month] = Math.max(...values);
+                    stats.worst[month] = Math.min(...values);
+                    stats.avg[month] = values.reduce((a, b) => a + b, 0) / values.length;
+                }
+            }
+
+            // Store stats globally for yearly chart
+            window.monthlyStats = stats;
 
             years.forEach(year => {
                 const row = document.createElement('tr');
@@ -942,6 +1013,35 @@
 
                 tbody.appendChild(row);
             });
+
+            // Add statistics rows to footer
+            const statRows = [
+                { key: 'best', label: '🟢 최고', className: 'stat-best' },
+                { key: 'worst', label: '🔴 최저', className: 'stat-worst' },
+                { key: 'avg', label: '⚪ 평균', className: 'stat-avg' }
+            ];
+
+            statRows.forEach(stat => {
+                const row = document.createElement('tr');
+                
+                const labelCell = document.createElement('td');
+                labelCell.className = 'stat-label ' + stat.className;
+                labelCell.textContent = stat.label;
+                row.appendChild(labelCell);
+
+                for (let month = 0; month < 12; month++) {
+                    const cell = document.createElement('td');
+                    cell.className = stat.className;
+                    const value = stats[stat.key][month];
+                    if (value !== undefined) {
+                        const sign = value >= 0 ? '+' : '';
+                        cell.textContent = sign + value.toFixed(1) + '%';
+                    }
+                    row.appendChild(cell);
+                }
+
+                tfoot.appendChild(row);
+            });
         }
 
         // Update chart title
@@ -950,6 +1050,303 @@
             const coinName = COIN_NAMES_KR[coin] || coin;
             const monthName = MONTH_NAMES_KR[month];
             title.textContent = `${coinName} ${monthName}, 과거엔 어땠을까?`;
+        }
+
+        // Get yearly data for all years
+        function getYearlyData(data) {
+            const yearlyData = {};
+            const currentYear = new Date().getFullYear();
+
+            data.forEach(d => {
+                const year = d.date.getFullYear();
+                const month = d.date.getMonth();
+                const day = d.date.getDate();
+
+                if (!yearlyData[year]) {
+                    yearlyData[year] = {};
+                }
+                if (!yearlyData[year][month]) {
+                    yearlyData[year][month] = {};
+                }
+                yearlyData[year][month][day] = d.price;
+            });
+
+            // Get Jan 1 price of current year as base
+            let basePrice = null;
+            if (yearlyData[currentYear] && yearlyData[currentYear][0]) {
+                const janDays = Object.keys(yearlyData[currentYear][0]).map(Number).sort((a, b) => a - b);
+                if (janDays.length > 0) {
+                    basePrice = yearlyData[currentYear][0][janDays[0]];
+                }
+            }
+
+            return { yearlyData, basePrice, currentYear };
+        }
+
+        // Calculate yearly scenario data
+        function calculateYearlyScenarios(data, monthlyReturns) {
+            const { yearlyData, basePrice, currentYear } = getYearlyData(data);
+            if (!basePrice) return null;
+
+            const years = Object.keys(yearlyData).map(Number).filter(y => y !== currentYear).sort();
+            
+            // Group monthly returns by year (excluding current year)
+            const yearlyReturns = {};
+            monthlyReturns.forEach(r => {
+                if (r.year !== currentYear) {
+                    if (!yearlyReturns[r.year]) {
+                        yearlyReturns[r.year] = {};
+                    }
+                    yearlyReturns[r.year][r.month] = r.return;
+                }
+            });
+
+            // Calculate scenario lines for each historical year
+            const scenarios = [];
+            let bestYear = null, worstYear = null;
+            let bestFinalReturn = -Infinity, worstFinalReturn = Infinity;
+
+            years.forEach(year => {
+                if (!yearlyReturns[year]) return;
+                
+                const points = [];
+                let cumulativePrice = basePrice;
+                
+                for (let month = 0; month < 12; month++) {
+                    const monthReturn = yearlyReturns[year][month];
+                    if (monthReturn !== undefined) {
+                        cumulativePrice = cumulativePrice * (1 + monthReturn / 100);
+                    }
+                    // Add point at end of each month
+                    points.push({
+                        month: month,
+                        price: cumulativePrice
+                    });
+                }
+
+                const finalReturn = ((cumulativePrice - basePrice) / basePrice) * 100;
+                
+                if (finalReturn > bestFinalReturn) {
+                    bestFinalReturn = finalReturn;
+                    bestYear = year;
+                }
+                if (finalReturn < worstFinalReturn) {
+                    worstFinalReturn = finalReturn;
+                    worstYear = year;
+                }
+
+                scenarios.push({
+                    year,
+                    data: points,
+                    finalReturn
+                });
+            });
+
+            // Calculate average scenario using monthly stats
+            const stats = window.monthlyStats;
+            const avgPoints = [];
+            let avgPrice = basePrice;
+            for (let month = 0; month < 12; month++) {
+                if (stats.avg[month] !== undefined) {
+                    avgPrice = avgPrice * (1 + stats.avg[month] / 100);
+                }
+                avgPoints.push({ month, price: avgPrice });
+            }
+
+            // Get current year actual data
+            const currentYearPoints = [];
+            if (yearlyData[currentYear]) {
+                let lastKnownPrice = basePrice;
+                for (let month = 0; month < 12; month++) {
+                    if (yearlyData[currentYear][month]) {
+                        const days = Object.keys(yearlyData[currentYear][month]).map(Number).sort((a, b) => a - b);
+                        if (days.length > 0) {
+                            lastKnownPrice = yearlyData[currentYear][month][days[days.length - 1]];
+                            currentYearPoints.push({ month, price: lastKnownPrice });
+                        }
+                    }
+                }
+            }
+
+            return {
+                scenarios,
+                bestYear,
+                worstYear,
+                avgData: avgPoints,
+                currentYearData: currentYearPoints,
+                basePrice,
+                currentYear
+            };
+        }
+
+        // Create yearly price scenario chart
+        function createYearlyChart(data, monthlyReturns) {
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+
+            if (yearlyChart) {
+                yearlyChart.destroy();
+            }
+
+            const scenarioData = calculateYearlyScenarios(data, monthlyReturns);
+            if (!scenarioData) return;
+
+            const { scenarios, bestYear, worstYear, avgData, currentYearData, basePrice, currentYear } = scenarioData;
+            const datasets = [];
+
+            // Add faded historical lines (excluding best and worst)
+            scenarios.forEach(scenario => {
+                if (scenario.year !== bestYear && scenario.year !== worstYear) {
+                    datasets.push({
+                        label: scenario.year.toString(),
+                        data: scenario.data.map(d => ({ x: d.month, y: d.price })),
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1.5,
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+            });
+
+            // Add average line (dashed)
+            datasets.push({
+                label: '평균',
+                data: avgData.map(d => ({ x: d.month, y: d.price })),
+                borderColor: '#888888',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3,
+                pointRadius: 0
+            });
+
+            // Add worst year
+            const worstScenario = scenarios.find(s => s.year === worstYear);
+            if (worstScenario) {
+                datasets.push({
+                    label: `${worstYear} (역대 최저)`,
+                    data: worstScenario.data.map(d => ({ x: d.month, y: d.price })),
+                    borderColor: '#ff4757',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                });
+            }
+
+            // Add best year
+            const bestScenario = scenarios.find(s => s.year === bestYear);
+            if (bestScenario) {
+                datasets.push({
+                    label: `${bestYear} (역대 최고)`,
+                    data: bestScenario.data.map(d => ({ x: d.month, y: d.price })),
+                    borderColor: '#00d4aa',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                });
+            }
+
+            // Add current year actual
+            if (currentYearData.length > 0) {
+                datasets.push({
+                    label: `${currentYear} (현재)`,
+                    data: currentYearData.map(d => ({ x: d.month, y: d.price })),
+                    borderColor: '#ffd43b',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#ffd43b'
+                });
+            }
+
+            // Update yearly chart title
+            const coinName = COIN_NAMES_KR[currentCoin] || currentCoin;
+            document.getElementById('yearly-chart-title').textContent = `${currentYear}년 ${coinName} 가격 시나리오`;
+
+            yearlyChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: (items) => {
+                                    if (items.length > 0) {
+                                        const monthIndex = Math.round(items[0].parsed.x);
+                                        return MONTH_NAMES_KR[monthIndex] || '';
+                                    }
+                                    return '';
+                                },
+                                label: (context) => {
+                                    const price = context.parsed.y;
+                                    const formattedPrice = formatPrice(price);
+                                    const returnPct = ((price - basePrice) / basePrice) * 100;
+                                    const sign = returnPct >= 0 ? '+' : '';
+                                    return ` ${context.dataset.label}: ${formattedPrice} (${sign}${returnPct.toFixed(1)}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: 0,
+                            max: 11,
+                            title: {
+                                display: true,
+                                text: '월',
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#888',
+                                stepSize: 1,
+                                callback: (value) => {
+                                    return MONTH_NAMES_KR[value] || '';
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '가격 (USD)',
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#888',
+                                callback: (value) => {
+                                    return formatPrice(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Main update function
@@ -972,6 +1369,9 @@
             // Calculate all monthly returns for heatmap
             const monthlyReturns = calculateMonthlyReturns(data);
             createHeatmap(monthlyReturns, currentMonth);
+
+            // Create yearly price scenario chart
+            createYearlyChart(data, monthlyReturns);
         }
 
         // Tab click handlers
