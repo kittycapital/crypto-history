@@ -216,7 +216,7 @@ const COINS={ETH:{file:'ethereum.csv',name:'Ethereum',ticker:'ETH',color:'#627ee
 
 let _btcData=[], _altData={}, _activeCoin='ETH';
 let _priceChart=null, _z6mChart=null, _z1yChart=null;
-let _syncing=false;
+let _syncing=false, _origMin=0, _origMax=0;
 
 // ─── DATA ───
 async function loadCSV(filename){
@@ -367,8 +367,8 @@ function buildCharts(coin){
         options:{
             responsive:true,maintainAspectRatio:false,animation:false,
             scales:{
-                x:{type:'time',time:{unit:'month',displayFormats:{month:'yyyy.MM'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'JetBrains Mono',size:10},maxTicksLimit:10},border:{color:'rgba(255,255,255,0.1)'}},
-                y:{type:'logarithmic',position:'right',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'JetBrains Mono',size:10},callback:v=>formatPrice(v)},border:{color:'rgba(255,255,255,0.1)'}}
+                x:{type:'time',offset:false,time:{unit:'month',displayFormats:{month:'yyyy.MM'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#999',font:{family:'JetBrains Mono',size:10},maxTicksLimit:10},border:{color:'rgba(255,255,255,0.1)'}},
+                y:{type:'logarithmic',position:'right',grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#999',font:{family:'JetBrains Mono',size:10},callback:v=>formatPrice(v)},border:{color:'rgba(255,255,255,0.1)'}}
             },
             plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>cfg.ticker+': '+formatPrice(ctx.parsed.y)}},zoom:zoomSync('price')}
         },
@@ -387,8 +387,8 @@ function buildCharts(coin){
             options:{
                 responsive:true,maintainAspectRatio:false,animation:false,
                 scales:{
-                    x:{type:'time',time:{unit:'month',displayFormats:{month:'yyyy.MM'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'JetBrains Mono',size:9},maxTicksLimit:10},border:{color:'rgba(255,255,255,0.1)'}},
-                    y:{min:-4,max:4,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'JetBrains Mono',size:9},stepSize:1},border:{color:'rgba(255,255,255,0.1)'},title:{display:true,text:titleAxis,color:'#666',font:{family:'JetBrains Mono',size:10}}}
+                    x:{type:'time',offset:false,time:{unit:'month',displayFormats:{month:'yyyy.MM'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#999',font:{family:'JetBrains Mono',size:9},maxTicksLimit:10},border:{color:'rgba(255,255,255,0.1)'}},
+                    y:{position:'right',min:-4,max:4,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#999',font:{family:'JetBrains Mono',size:9},stepSize:1},border:{color:'rgba(255,255,255,0.1)'},title:{display:true,text:titleAxis,color:'#999',font:{family:'JetBrains Mono',size:10}}}
                 },
                 plugins:{
                     legend:{display:false},
@@ -408,10 +408,16 @@ function buildCharts(coin){
     _z6mChart=buildZChart('z6mChart',z6m,'rgba(77,171,247,0.5)','z6m','6개월 Z-Score');
     _z1yChart=buildZChart('z1yChart',z1y,'rgba(255,212,59,0.5)','z1y','1년 Z-Score');
 
-    // Sync x-axis ranges
-    if(_priceChart&&z6m.length){
-        const minT=Math.min(priceData[0].x,z6m[0].date.getTime());
-        const maxT=Math.max(priceData[priceData.length-1].x,(z1y.length?z1y[z1y.length-1].date.getTime():z6m[z6m.length-1].date.getTime()));
+    // Sync x-axis ranges — use 1yr Z start (latest) as common start
+    if(_priceChart&&z1y.length){
+        const minT=z1y[0].date.getTime();
+        const maxT=priceData[priceData.length-1].x;
+        _origMin=minT;_origMax=maxT;
+        [_priceChart,_z6mChart,_z1yChart].forEach(c=>{if(c){c.options.scales.x.min=minT;c.options.scales.x.max=maxT;c.update('none');}});
+    } else if(_priceChart&&z6m.length){
+        const minT=z6m[0].date.getTime();
+        const maxT=priceData[priceData.length-1].x;
+        _origMin=minT;_origMax=maxT;
         [_priceChart,_z6mChart,_z1yChart].forEach(c=>{if(c){c.options.scales.x.min=minT;c.options.scales.x.max=maxT;c.update('none');}});
     }
 }
@@ -427,11 +433,8 @@ function syncCharts(source,sourceId){
 }
 
 function resetZoom(){
-    if(!_priceChart)return;
-    const ds=_priceChart.data.datasets[0].data;
-    if(!ds.length)return;
-    const minT=ds[0].x,maxT=ds[ds.length-1].x;
-    [_priceChart,_z6mChart,_z1yChart].forEach(c=>{if(c){c.options.scales.x.min=minT;c.options.scales.x.max=maxT;c.update('none');}});
+    if(!_priceChart||!_origMin)return;
+    [_priceChart,_z6mChart,_z1yChart].forEach(c=>{if(c){c.options.scales.x.min=_origMin;c.options.scales.x.max=_origMax;c.update('none');}});
     document.getElementById('zoomResetBtn').style.display='none';
 }
 
