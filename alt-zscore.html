@@ -29,7 +29,7 @@
             --eth-color:#627eea;--sol-color:#14f195;--btc-color:#f7931a;
         }
         html,body{overflow-x:hidden}
-        body{font-family:'Noto Sans KR',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;line-height:1.6}
+        body{font-family:'Noto Sans KR',sans-serif;background:var(--bg-primary);color:var(--text-primary);line-height:1.6;overflow-x:hidden}
         .container{max-width:1400px;margin:0 auto;padding:20px}
         .header{text-align:center;padding:30px 0 20px;border-bottom:1px solid var(--border-color);margin-bottom:20px}
         .header h1{font-size:1.8rem;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px}
@@ -477,8 +477,19 @@ async function init(){
 }
 document.addEventListener('DOMContentLoaded',init);
 
-// iframe resize
-setInterval(function(){if(window.parent!==window){window.parent.postMessage({type:'resize',height:document.body.scrollHeight},'*');}},300);
+// iframe resize — measure container, not body (prevents feedback loop)
+(function(){
+  var lastH=0;
+  var container=document.querySelector('.container');
+  setInterval(function(){
+    if(window.parent===window)return;
+    var h=container?container.offsetHeight+40:0;
+    if(h>0&&Math.abs(h-lastH)>5){
+      lastH=h;
+      window.parent.postMessage({type:'resize',height:h},'*');
+    }
+  },500);
+})();
 </script>
 </body>
 </html>
