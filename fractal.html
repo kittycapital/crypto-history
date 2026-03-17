@@ -64,14 +64,14 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
 .hv-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--hv-space-sm);margin-bottom:var(--hv-space-lg)}
 .hv-kpi{background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-md);padding:14px 16px;transition:all var(--hv-transition);text-align:center}
 .hv-kpi:hover{border-color:var(--hv-border-strong);transform:translateY(-1px)}
-.hv-kpi-label{font-size:.65rem;font-weight:500;color:var(--hv-text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.hv-kpi-label{font-size:.65rem;font-weight:500;color:#999;letter-spacing:.06em;margin-bottom:6px}
 .hv-kpi-value{font-family:var(--hv-font-mono);font-size:1.15rem;font-weight:700;color:var(--hv-text-primary);margin-bottom:2px}
-.hv-kpi-sub{font-size:.65rem;color:var(--hv-text-secondary);font-family:var(--hv-font-mono)}
+.hv-kpi-sub{font-size:.7rem;color:#bbb;font-family:var(--hv-font-mono)}
 
 .hv-card{background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-lg);overflow:hidden;margin-bottom:var(--hv-space-lg)}
 .hv-card-head{display:flex;align-items:center;justify-content:center;padding:14px var(--hv-space-lg);border-bottom:1px solid var(--hv-border)}
 .hv-card-head h2{font-size:.875rem;font-weight:600;color:var(--hv-text-primary);text-align:center}
-.hv-card-head-sub{font-family:var(--hv-font-mono);font-size:.688rem;color:var(--hv-text-tertiary);margin-left:10px}
+.hv-card-head-sub{font-family:var(--hv-font-mono);font-size:.688rem;color:#888;margin-left:10px}
 .hv-card-body{padding:var(--hv-space-lg)}
 .chart-wrap{position:relative;width:100%;height:340px}
 .chart-wrap canvas{width:100%!important;height:100%!important}
@@ -89,10 +89,11 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
 .share-btn--copy:hover{border-color:var(--hv-primary);color:var(--hv-primary-light);background:var(--hv-primary-glow)}
 
 .match-table{width:100%;border-collapse:collapse}
-.match-table th{text-align:center;color:var(--hv-text-tertiary);font-weight:500;padding:10px 8px;border-bottom:1px solid var(--hv-border);font-size:.688rem;text-transform:uppercase;letter-spacing:.04em}
-.match-table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.03);font-family:var(--hv-font-mono);font-size:.75rem;color:var(--hv-text-secondary);text-align:center;vertical-align:middle}
+.match-table th{text-align:center;color:#999;font-weight:500;padding:10px 8px;border-bottom:1px solid var(--hv-border);font-size:.688rem;letter-spacing:.04em}
+.match-table td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.03);font-family:var(--hv-font-mono);font-size:.75rem;color:#bbb;text-align:center;vertical-align:middle}
 .match-table tbody tr{cursor:pointer;transition:all var(--hv-transition-fast)}
 .match-table tbody tr:hover{background:var(--hv-bg-card-hover)}
+.match-hint{text-align:center;padding:10px 0 4px;font-size:.72rem;color:#666;letter-spacing:-.01em}
 .match-table tbody tr.sel-1{background:rgba(6,182,212,0.08)}
 .match-table tbody tr.sel-2{background:rgba(168,85,247,0.08)}
 .match-table tbody tr.sel-3{background:rgba(255,140,66,0.08)}
@@ -167,9 +168,9 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
 
 <script>
 var COINS=[
-  {id:'bitcoin',symbol:'BTC',name:'Bitcoin',hex:'#f7931a',ws:'btcusdt',icon:'assets/bitcoin.svg'},
-  {id:'ethereum',symbol:'ETH',name:'Ethereum',hex:'#627eea',ws:'ethusdt',icon:'assets/ethereum.png'},
-  {id:'solana',symbol:'SOL',name:'Solana',hex:'#9945ff',ws:'solusdt',icon:'assets/solana.png'}
+  {id:'bitcoin',symbol:'BTC',name:'Bitcoin',nameKo:'비트코인',hex:'#f7931a',ws:'btcusdt',icon:'assets/bitcoin.svg'},
+  {id:'ethereum',symbol:'ETH',name:'Ethereum',nameKo:'이더리움',hex:'#627eea',ws:'ethusdt',icon:'assets/ethereum.png'},
+  {id:'solana',symbol:'SOL',name:'Solana',nameKo:'솔라나',hex:'#9945ff',ws:'solusdt',icon:'assets/solana.png'}
 ];
 var LB=30,FW=7,TOP_N=15;
 var OV_C=['#06b6d4','#a855f7','#ff8c42'];
@@ -271,7 +272,7 @@ function analyze(data){
 
 /* === CHART PLUGINS === */
 var wmPlugin={id:'wm',beforeDraw:function(ch){var ctx=ch.ctx,ca=ch.chartArea;if(!ca)return;ctx.save();ctx.font='700 28px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.03)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore()}};
-var divPlugin={id:'div',afterDraw:function(ch){var meta=ch.getDatasetMeta(0);if(!meta||!meta.data)return;var lp=null;for(var i=meta.data.length-1;i>=0;i--){if(ch.data.datasets[0].data[i]!==null){lp=meta.data[i];break}}if(!lp)return;var ctx=ch.ctx,yA=ch.scales.y;ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.moveTo(lp.x,yA.top);ctx.lineTo(lp.x,yA.bottom);ctx.stroke();ctx.font="500 9px 'JetBrains Mono'";ctx.fillStyle='#555';ctx.textAlign='center';ctx.fillText('TODAY',lp.x,yA.top-4);ctx.restore()}};
+var divPlugin={id:'div',afterDraw:function(ch){var meta=ch.getDatasetMeta(0);if(!meta||!meta.data)return;var lp=null;for(var i=meta.data.length-1;i>=0;i--){if(ch.data.datasets[0].data[i]!==null){lp=meta.data[i];break}}if(!lp)return;var ctx=ch.ctx,yA=ch.scales.y;ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.moveTo(lp.x,yA.top);ctx.lineTo(lp.x,yA.bottom);ctx.stroke();ctx.font="500 9px 'JetBrains Mono'";ctx.fillStyle='#555';ctx.textAlign='center';ctx.fillText('오늘',lp.x,yA.top-4);ctx.restore()}};
 Chart.register(wmPlugin,divPlugin);
 Chart.defaults.color='#666';Chart.defaults.borderColor='#1a1a1a';
 Chart.defaults.font.family="'JetBrains Mono','Noto Sans KR',sans-serif";Chart.defaults.font.size=10;
@@ -290,9 +291,9 @@ function buildChart(r,ovs){
 
   var ds=[
     {label:'실제 가격',data:hist,borderColor:coin.hex,backgroundColor:coin.hex+'12',borderWidth:2.5,pointRadius:0,tension:.3,fill:true,order:1},
-    {label:'Bullish (상위 25%)',data:mk(r.sc.bull),borderColor:'#22c55e',borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,fill:false,order:2},
-    {label:'Average',data:mk(r.sc.avg),borderColor:'#f59e0b',borderWidth:2,borderDash:[4,4],pointRadius:0,tension:.3,fill:false,order:3},
-    {label:'Bearish (하위 25%)',data:mk(r.sc.bear),borderColor:'#ef4444',borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,fill:false,order:4},
+    {label:'강세 (상위 25%)',data:mk(r.sc.bull),borderColor:'#22c55e',borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,fill:false,order:2},
+    {label:'평균',data:mk(r.sc.avg),borderColor:'#f59e0b',borderWidth:2,borderDash:[4,4],pointRadius:0,tension:.3,fill:false,order:3},
+    {label:'약세 (하위 25%)',data:mk(r.sc.bear),borderColor:'#ef4444',borderWidth:2,borderDash:[6,3],pointRadius:0,tension:.3,fill:false,order:4},
     {label:'_max',data:mk(r.sc.maxB),borderColor:'transparent',backgroundColor:'rgba(34,197,94,0.04)',pointRadius:0,fill:false,tension:.3,order:10},
     {label:'_min',data:mk(r.sc.minB),borderColor:'transparent',backgroundColor:'rgba(239,68,68,0.04)',pointRadius:0,fill:'-1',tension:.3,order:11}
   ];
@@ -318,15 +319,15 @@ function renderChart(r){
   mainChart=new Chart(ctx,{type:'line',data:cd,options:{
     interaction:{mode:'index',intersect:false},
     plugins:{
-      legend:{display:true,position:'top',labels:{color:'#666',font:{size:10,family:"'Noto Sans KR'"},boxWidth:10,padding:10,usePointStyle:true,pointStyle:'line',
+      legend:{display:true,position:'top',labels:{color:'#999',font:{size:10,family:"'Noto Sans KR'"},boxWidth:10,padding:10,usePointStyle:true,pointStyle:'line',
         filter:function(item){return item.text.charAt(0)!=='_'}}},
       tooltip:{backgroundColor:'#1a1a1a',borderColor:'#333',borderWidth:1,titleColor:'#999',bodyColor:'#eee',
         titleFont:{family:"'JetBrains Mono'",size:10},bodyFont:{family:"'JetBrains Mono'",size:11},
         callbacks:{label:function(c){if(c.raw===null)return null;if(c.dataset.label.charAt(0)==='_')return null;var v=c.raw;return' '+c.dataset.label+': $'+(v>=100?v.toLocaleString('en',{maximumFractionDigits:0}):v.toFixed(2))}}}
     },
     scales:{
-      x:{grid:{color:'rgba(255,255,255,0.02)'},ticks:{color:'#444',font:{size:9},maxTicksLimit:12,maxRotation:0}},
-      y:{position:'right',grid:{color:'rgba(255,255,255,0.02)'},ticks:{color:'#444',font:{size:9},callback:function(v){return v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+v.toFixed(2)}}}
+      x:{grid:{color:'rgba(255,255,255,0.02)'},ticks:{color:'#777',font:{size:9},maxTicksLimit:12,maxRotation:0}},
+      y:{position:'right',grid:{color:'rgba(255,255,255,0.02)'},ticks:{color:'#777',font:{size:9},callback:function(v){return v>=1000?'$'+(v/1000).toFixed(1)+'k':'$'+v.toFixed(2)}}}
     }
   }});
 }
@@ -354,7 +355,7 @@ function renderAll(r,coin){
   var cp=r.cp;
 
   var cL,cC;
-  if(r.ac>=0.65){cL='Strong';cC='conf-s'}else if(r.ac>=0.55){cL='Moderate';cC='conf-m'}else{cL='Weak';cC='conf-w'}
+  if(r.ac>=0.65){cL='강함';cC='conf-s'}else if(r.ac>=0.55){cL='보통';cC='conf-m'}else{cL='약함';cC='conf-w'}
 
   var rows=r.top.slice(0,10).map(function(m,i){
     var rc=m.ffr>=0?'pos':'neg';
@@ -369,19 +370,19 @@ function renderAll(r,coin){
 
   document.getElementById('mainContent').innerHTML=
     '<div class="hv-metrics">'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">현재가</div><div class="hv-kpi-value" id="kpi-price" style="color:'+coin.hex+'">'+fmtP(cp)+'</div><div class="hv-kpi-sub">'+coin.symbol+'/USDT</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">Bullish (7D)</div><div class="hv-kpi-value" style="color:var(--hv-up)">'+fmtP(r.bullT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-up)">'+fmtPct(r.bullT,cp)+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">Average (7D)</div><div class="hv-kpi-value" style="color:var(--hv-warning)">'+fmtP(r.avgT)+'</div><div class="hv-kpi-sub" style="color:'+(r.avgT>=cp?'var(--hv-up)':'var(--hv-down)')+'">'+fmtPct(r.avgT,cp)+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">Bearish (7D)</div><div class="hv-kpi-value" style="color:var(--hv-down)">'+fmtP(r.bearT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-down)">'+fmtPct(r.bearT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">현재가</div><div class="hv-kpi-value" id="kpi-price" style="color:'+coin.hex+'">'+fmtP(cp)+'</div><div class="hv-kpi-sub">바이낸스 실시간</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">강세 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-up)">'+fmtP(r.bullT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-up)">'+fmtPct(r.bullT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">평균 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-warning)">'+fmtP(r.avgT)+'</div><div class="hv-kpi-sub" style="color:'+(r.avgT>=cp?'var(--hv-up)':'var(--hv-down)')+'">'+fmtPct(r.avgT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">약세 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-down)">'+fmtP(r.bearT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-down)">'+fmtPct(r.bearT,cp)+'</div></div>'+
       '<div class="hv-kpi"><div class="hv-kpi-label">7일 상승 확률</div><div class="hv-kpi-value" style="color:'+(r.wr>=50?'var(--hv-up)':'var(--hv-down)')+'">'+r.wr+'%</div><div class="hv-kpi-sub">'+r.top.filter(function(m){return m.ffr>0}).length+' / '+r.top.length+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">패턴 신뢰도</div><div class="hv-kpi-value"><span class="conf-badge '+cC+'">'+cL+'</span></div><div class="hv-kpi-sub">avg r = '+r.ac.toFixed(3)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">패턴 신뢰도</div><div class="hv-kpi-value"><span class="conf-badge '+cC+'">'+cL+'</span></div><div class="hv-kpi-sub">평균 상관계수 '+r.ac.toFixed(3)+'</div></div>'+
     '</div>'+
 
     '<div class="hv-card">'+
-      '<div class="hv-card-head"><h2>'+coin.name+' Fractal Projection<span class="hv-card-head-sub">LOOKBACK '+LB+'D / FORWARD '+FW+'D</span></h2></div>'+
+      '<div class="hv-card-head"><h2>'+coin.nameKo+' 프랙탈 예측<span class="hv-card-head-sub">30일 패턴 → 7일 투영</span></h2></div>'+
       '<div class="hv-card-body"><div class="chart-wrap"><canvas id="fractalChart"></canvas></div></div>'+
       '<div class="share-bar">'+
-        '<div class="share-bar-preview"><span>'+coin.name+' Fractal</span> — herdvibe.com</div>'+
+        '<div class="share-bar-preview"><span>'+coin.nameKo+' 프랙탈 예측</span> — herdvibe.com</div>'+
         '<div class="share-bar-buttons">'+
           '<button class="share-btn share-btn--x" onclick="doShare(\'twitter\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span class="label-text">트위터</span></button>'+
           '<button class="share-btn share-btn--kakao" onclick="doShare(\'kakao\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg><span class="label-text">카카오톡</span></button>'+
@@ -393,6 +394,7 @@ function renderAll(r,coin){
 
     '<div class="hv-card">'+
       '<div class="hv-card-head"><h2>상위 유사 패턴 (피어슨 상관계수 기준)</h2></div>'+
+      '<div class="match-hint">패턴을 클릭하면 차트에 오버레이됩니다 (최대 3개)</div>'+
       '<div style="overflow-x:auto">'+
         '<table class="match-table"><thead><tr><th>#</th><th>기간</th><th>상관계수</th><th>7일 수익률</th><th>7일 경로</th></tr></thead>'+
         '<tbody>'+rows+'</tbody></table>'+
@@ -439,7 +441,7 @@ async function switchCoin(id){
   curCoin=id;selOv=[];renderTabs();
   var coin=COINS.find(function(c){return c.id===id});
   if(!coinData[id]){
-    document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div class="spinner"></div><div class="loading-text">'+coin.name+' 분석 중...</div></div>';
+    document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div class="spinner"></div><div class="loading-text">'+coin.nameKo+' 분석 중...</div></div>';
     try{coinData[id]=await loadCSV(id)}catch(e){document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div style="color:var(--hv-down)">'+e.message+'</div></div>';return}
   }
   renderAll(analyze(coinData[id]),coin);
@@ -451,12 +453,12 @@ function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized()
 ensureKakao();
 function doShare(p,b){
   var coin=COINS.find(function(c){return c.id===curCoin});
-  var u=SHARE_URL,t=encodeURIComponent(coin.name+' 프랙탈 예측 — 향후 7일 시나리오 | herdvibe.com'),eu=encodeURIComponent(u);
+  var u=SHARE_URL,t=encodeURIComponent(coin.nameKo+' 프랙탈 예측 — 향후 7일 시나리오 | herdvibe.com'),eu=encodeURIComponent(u);
   switch(p){
     case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;
     case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;
     case'kakao':if(!ensureKakao()){cpClip(u);toast('링크 복사완료!');return}
-      try{Kakao.Share.sendDefault({objectType:'feed',content:{title:coin.name+' 프랙탈 예측 | Herdvibe',description:'과거 패턴 기반 향후 7일 가격 시나리오',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:u,webUrl:u}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:u,webUrl:u}}]})}catch(e){cpClip(u);toast('링크 복사완료!')}break;
+      try{Kakao.Share.sendDefault({objectType:'feed',content:{title:coin.nameKo+' 프랙탈 예측 | Herdvibe',description:'과거 패턴 기반 향후 7일 가격 시나리오',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:u,webUrl:u}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:u,webUrl:u}}]})}catch(e){cpClip(u);toast('링크 복사완료!')}break;
     case'link':cpClip(u);flashCp(b);toast('링크가 복사되었습니다');break;
   }
 }
