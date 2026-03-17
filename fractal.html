@@ -271,7 +271,7 @@ function analyze(data){
 }
 
 /* === CHART PLUGINS === */
-var wmPlugin={id:'wm',beforeDraw:function(ch){var ctx=ch.ctx,ca=ch.chartArea;if(!ca)return;ctx.save();ctx.font='700 28px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.03)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore()}};
+var wmPlugin={id:'wm',beforeDraw:function(ch){var ctx=ch.ctx,ca=ch.chartArea;if(!ca)return;ctx.save();ctx.font='800 36px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.03)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore()}};
 var divPlugin={id:'div',afterDraw:function(ch){var meta=ch.getDatasetMeta(0);if(!meta||!meta.data)return;var lp=null;for(var i=meta.data.length-1;i>=0;i--){if(ch.data.datasets[0].data[i]!==null){lp=meta.data[i];break}}if(!lp)return;var ctx=ch.ctx,yA=ch.scales.y;ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.moveTo(lp.x,yA.top);ctx.lineTo(lp.x,yA.bottom);ctx.stroke();ctx.font="500 9px 'JetBrains Mono'";ctx.fillStyle='#555';ctx.textAlign='center';ctx.fillText('오늘',lp.x,yA.top-4);ctx.restore()}};
 Chart.register(wmPlugin,divPlugin);
 Chart.defaults.color='#666';Chart.defaults.borderColor='#1a1a1a';
