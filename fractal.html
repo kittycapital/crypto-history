@@ -61,6 +61,12 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
 .coin-tab.active{border-color:var(--active-color);color:var(--hv-text-primary);background:var(--hv-bg-elevated)}
 .coin-tab img{width:20px;height:20px;border-radius:50%}
 
+.tf-row{display:flex;justify-content:center;margin-bottom:var(--hv-space-lg)}
+.tf-group{display:flex;background:var(--hv-bg-card);border-radius:var(--hv-radius-sm);border:1px solid var(--hv-border);overflow:hidden}
+.tf-btn{font-family:var(--hv-font-body);font-size:.82rem;font-weight:600;padding:9px 24px;border:none;background:transparent;color:var(--hv-text-muted);cursor:pointer;transition:all var(--hv-transition);white-space:nowrap}
+.tf-btn:hover{color:var(--hv-text-secondary);background:var(--hv-bg-card-hover)}
+.tf-btn.active{color:var(--hv-text-primary);background:var(--hv-bg-elevated)}
+
 .hv-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--hv-space-sm);margin-bottom:var(--hv-space-lg)}
 .hv-kpi{background:var(--hv-bg-card);border:1px solid var(--hv-border);border-radius:var(--hv-radius-md);padding:14px 16px;transition:all var(--hv-transition);text-align:center}
 .hv-kpi:hover{border-color:var(--hv-border-strong);transform:translateY(-1px)}
@@ -131,6 +137,7 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
   .chart-wrap{height:260px}
   .coin-tabs{gap:6px}
   .coin-tab{padding:8px 14px;font-size:.8rem}
+  .tf-row{margin-bottom:var(--hv-space-md)}.tf-btn{padding:8px 18px;font-size:.75rem}
   .share-bar{flex-direction:column;gap:10px;align-items:stretch}
   .share-bar-preview{max-width:100%}
   .share-bar-buttons{justify-content:center;flex-wrap:wrap}
@@ -161,6 +168,12 @@ body{font-family:var(--hv-font-body);background:var(--hv-bg-base);color:var(--hv
 
 <div class="hv-page">
   <div class="coin-tabs" id="coinTabs"></div>
+  <div class="tf-row">
+    <div class="tf-group">
+      <button class="tf-btn active" data-mode="7d" onclick="switchMode('7d')">7일 예측</button>
+      <button class="tf-btn" data-mode="30d" onclick="switchMode('30d')">30일 예측</button>
+    </div>
+  </div>
   <div id="mainContent">
     <div class="loading-overlay"><div class="spinner"></div><div class="loading-text">데이터 로딩 중...</div></div>
   </div>
@@ -172,9 +185,9 @@ var COINS=[
   {id:'ethereum',symbol:'ETH',name:'Ethereum',nameKo:'이더리움',hex:'#627eea',ws:'ethusdt',icon:'assets/ethereum.png'},
   {id:'solana',symbol:'SOL',name:'Solana',nameKo:'솔라나',hex:'#9945ff',ws:'solusdt',icon:'assets/solana.png'}
 ];
-var LB=30,FW=7,TOP_N=15;
+var MODES={'7d':{lb:30,fw:7,label:'7일',lbLabel:'30일'},'30d':{lb:30,fw:30,label:'30일',lbLabel:'30일'}};
 var OV_C=['#06b6d4','#a855f7','#ff8c42'];
-var coinData={},curCoin='bitcoin',curResult=null,mainChart=null,selOv=[],liveP={},ws=null;
+var coinData={},curCoin='bitcoin',curMode='7d',curResult=null,mainChart=null,selOv=[],liveP={},ws=null;
 
 /* === BINANCE WS === */
 function connectWS(){
@@ -220,6 +233,7 @@ function pears(a,b){
 
 /* === ANALYSIS === */
 function analyze(data){
+  var mode=MODES[curMode],LB=mode.lb,FW=mode.fw,TOP_N=15;
   var prices=data.map(function(d){return d.price});
   var dates=data.map(function(d){return d.date});
   var n=prices.length;
@@ -350,6 +364,7 @@ function fmtPct(v,base){var p=((v-base)/base*100);return(p>=0?'+':'')+p.toFixed(
 
 /* === RENDER === */
 function renderAll(r,coin){
+  var mode=MODES[curMode],fwL=mode.label,lbL=mode.lbLabel;
   if(r.error){document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div style="color:var(--hv-down);font-size:.85rem">'+r.error+'</div></div>';return}
   curResult=r;selOv=[];
   var cp=r.cp;
@@ -371,15 +386,15 @@ function renderAll(r,coin){
   document.getElementById('mainContent').innerHTML=
     '<div class="hv-metrics">'+
       '<div class="hv-kpi"><div class="hv-kpi-label">현재가</div><div class="hv-kpi-value" id="kpi-price" style="color:'+coin.hex+'">'+fmtP(cp)+'</div><div class="hv-kpi-sub">바이낸스 실시간</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">강세 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-up)">'+fmtP(r.bullT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-up)">'+fmtPct(r.bullT,cp)+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">평균 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-warning)">'+fmtP(r.avgT)+'</div><div class="hv-kpi-sub" style="color:'+(r.avgT>=cp?'var(--hv-up)':'var(--hv-down)')+'">'+fmtPct(r.avgT,cp)+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">약세 예측 (7일)</div><div class="hv-kpi-value" style="color:var(--hv-down)">'+fmtP(r.bearT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-down)">'+fmtPct(r.bearT,cp)+'</div></div>'+
-      '<div class="hv-kpi"><div class="hv-kpi-label">7일 상승 확률</div><div class="hv-kpi-value" style="color:'+(r.wr>=50?'var(--hv-up)':'var(--hv-down)')+'">'+r.wr+'%</div><div class="hv-kpi-sub">'+r.top.filter(function(m){return m.ffr>0}).length+' / '+r.top.length+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">강세 예측 ('+fwL+')</div><div class="hv-kpi-value" style="color:var(--hv-up)">'+fmtP(r.bullT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-up)">'+fmtPct(r.bullT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">평균 예측 ('+fwL+')</div><div class="hv-kpi-value" style="color:var(--hv-warning)">'+fmtP(r.avgT)+'</div><div class="hv-kpi-sub" style="color:'+(r.avgT>=cp?'var(--hv-up)':'var(--hv-down)')+'">'+fmtPct(r.avgT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">약세 예측 ('+fwL+')</div><div class="hv-kpi-value" style="color:var(--hv-down)">'+fmtP(r.bearT)+'</div><div class="hv-kpi-sub" style="color:var(--hv-down)">'+fmtPct(r.bearT,cp)+'</div></div>'+
+      '<div class="hv-kpi"><div class="hv-kpi-label">'+fwL+' 상승 확률</div><div class="hv-kpi-value" style="color:'+(r.wr>=50?'var(--hv-up)':'var(--hv-down)')+'">'+r.wr+'%</div><div class="hv-kpi-sub">'+r.top.filter(function(m){return m.ffr>0}).length+' / '+r.top.length+'</div></div>'+
       '<div class="hv-kpi"><div class="hv-kpi-label">패턴 신뢰도</div><div class="hv-kpi-value"><span class="conf-badge '+cC+'">'+cL+'</span></div><div class="hv-kpi-sub">평균 상관계수 '+r.ac.toFixed(3)+'</div></div>'+
     '</div>'+
 
     '<div class="hv-card">'+
-      '<div class="hv-card-head"><h2>'+coin.nameKo+' 프랙탈 예측<span class="hv-card-head-sub">30일 패턴 → 7일 투영</span></h2></div>'+
+      '<div class="hv-card-head"><h2>'+coin.nameKo+' 프랙탈 예측<span class="hv-card-head-sub">'+lbL+' 패턴 → '+fwL+' 투영</span></h2></div>'+
       '<div class="hv-card-body"><div class="chart-wrap"><canvas id="fractalChart"></canvas></div></div>'+
       '<div class="share-bar">'+
         '<div class="share-bar-preview"><span>'+coin.nameKo+' 프랙탈 예측</span> — herdvibe.com</div>'+
@@ -396,7 +411,7 @@ function renderAll(r,coin){
       '<div class="hv-card-head"><h2>상위 유사 패턴 (피어슨 상관계수 기준)</h2></div>'+
       '<div class="match-hint">패턴을 클릭하면 차트에 오버레이됩니다 (최대 3개)</div>'+
       '<div style="overflow-x:auto">'+
-        '<table class="match-table"><thead><tr><th>#</th><th>기간</th><th>상관계수</th><th>7일 수익률</th><th>7일 경로</th></tr></thead>'+
+        '<table class="match-table"><thead><tr><th>#</th><th>기간</th><th>상관계수</th><th>'+fwL+' 수익률</th><th>'+fwL+' 경로</th></tr></thead>'+
         '<tbody>'+rows+'</tbody></table>'+
       '</div>'+
     '</div>'+
@@ -439,12 +454,24 @@ function renderTabs(){
 
 async function switchCoin(id){
   curCoin=id;selOv=[];renderTabs();
-  var coin=COINS.find(function(c){return c.id===id});
-  if(!coinData[id]){
-    document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div class="spinner"></div><div class="loading-text">'+coin.nameKo+' 분석 중...</div></div>';
-    try{coinData[id]=await loadCSV(id)}catch(e){document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div style="color:var(--hv-down)">'+e.message+'</div></div>';return}
+  runCryptoAnalysis();
+}
+
+function switchMode(mode){
+  curMode=mode;
+  document.querySelectorAll('.tf-btn').forEach(function(b){b.classList.toggle('active',b.dataset.mode===mode)});
+  selOv=[];
+  runCryptoAnalysis();
+}
+
+async function runCryptoAnalysis(){
+  var coin=COINS.find(function(c){return c.id===curCoin});
+  var mode=MODES[curMode];
+  if(!coinData[curCoin]){
+    document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div class="spinner"></div><div class="loading-text">'+coin.nameKo+' '+mode.label+' 분석 중...</div></div>';
+    try{coinData[curCoin]=await loadCSV(curCoin)}catch(e){document.getElementById('mainContent').innerHTML='<div class="loading-overlay"><div style="color:var(--hv-down)">'+e.message+'</div></div>';return}
   }
-  renderAll(analyze(coinData[id]),coin);
+  renderAll(analyze(coinData[curCoin]),coin);
 }
 
 /* === SHARE === */
@@ -453,12 +480,12 @@ function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized()
 ensureKakao();
 function doShare(p,b){
   var coin=COINS.find(function(c){return c.id===curCoin});
-  var u=SHARE_URL,t=encodeURIComponent(coin.nameKo+' 프랙탈 예측 — 향후 7일 시나리오 | herdvibe.com'),eu=encodeURIComponent(u);
+  var u=SHARE_URL,t=encodeURIComponent(coin.nameKo+' 프랙탈 예측 — 향후 '+MODES[curMode].label+' 시나리오 | herdvibe.com'),eu=encodeURIComponent(u);
   switch(p){
     case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;
     case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;
     case'kakao':if(!ensureKakao()){cpClip(u);toast('링크 복사완료!');return}
-      try{Kakao.Share.sendDefault({objectType:'feed',content:{title:coin.nameKo+' 프랙탈 예측 | Herdvibe',description:'과거 패턴 기반 향후 7일 가격 시나리오',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:u,webUrl:u}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:u,webUrl:u}}]})}catch(e){cpClip(u);toast('링크 복사완료!')}break;
+      try{Kakao.Share.sendDefault({objectType:'feed',content:{title:coin.nameKo+' 프랙탈 예측 | Herdvibe',description:'과거 패턴 기반 향후 '+MODES[curMode].label+' 가격 시나리오',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:u,webUrl:u}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:u,webUrl:u}}]})}catch(e){cpClip(u);toast('링크 복사완료!')}break;
     case'link':cpClip(u);flashCp(b);toast('링크가 복사되었습니다');break;
   }
 }
@@ -484,7 +511,7 @@ function sendHeight(){
 window.addEventListener('message',function(e){if(e.data&&e.data.type==='requestResize'){_lastH=0;_settled=false;sendHeight()}});
 
 /* === INIT === */
-renderTabs();switchCoin('bitcoin');connectWS();
+renderTabs();runCryptoAnalysis();connectWS();
 window.addEventListener('resize',sendHeight);
 </script>
 </body>
