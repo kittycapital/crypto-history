@@ -467,14 +467,25 @@ function flashCp(b){if(!b)return;var o=b.innerHTML;b.style.background='#22c55e';
 function toast(m){var c=document.querySelector('.toast-wrap');if(!c){c=document.createElement('div');c.className='toast-wrap';document.body.appendChild(c)}var t=document.createElement('div');t.className='toast';t.textContent=m;c.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove()},300)},3000)}
 
 /* === RESIZE === */
-var _lastH=0,_ht;
-function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h},'*')}},150)}
-window.addEventListener('message',function(e){if(e.data&&e.data.type==='requestResize'){_lastH=0;sendHeight()}});
+var _lastH=0,_ht,_settled=false;
+function sendHeight(){
+  clearTimeout(_ht);
+  _ht=setTimeout(function(){
+    var h=document.documentElement.scrollHeight;
+    if(Math.abs(h-_lastH)>20){
+      _lastH=h;_settled=false;
+      window.parent.postMessage({type:'resize',height:h},'*');
+    }else if(!_settled){
+      _settled=true;
+      window.parent.postMessage({type:'resize',height:h},'*');
+    }
+  },300);
+}
+window.addEventListener('message',function(e){if(e.data&&e.data.type==='requestResize'){_lastH=0;_settled=false;sendHeight()}});
 
 /* === INIT === */
 renderTabs();switchCoin('bitcoin');connectWS();
 window.addEventListener('resize',sendHeight);
-new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});
 </script>
 </body>
 </html>
